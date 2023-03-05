@@ -1,0 +1,25 @@
+{
+ "exe": "main",
+ "key": "private.pem",
+ "debug": true,
+ "heapSize": 512,
+ "executableHeap": false,
+ "productID": 1,
+ "securityVersion": 1,
+ "mounts": [
+  {
+      "source": "./",
+      "target": "/interpretto",
+      "type": "hostfs",
+      "readOnly": false
+  },
+  {
+    "source": "./../../data",
+    "target": "/data",
+    "type": "hostfs",
+    "readOnly": false
+}
+],
+ "env": null,
+ "files": null
+}
