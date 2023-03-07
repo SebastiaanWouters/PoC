@@ -1,9 +1,9 @@
 
 #init
-go get -d -v ./...
+go get node
 
 #build
 EGOPATH=/snap/ego-dev/current/opt/ego CGO_CFLAGS=-I$EGOPATH/include CGO_LDFLAGS=-L$EGOPATH/lib go build
 
 #run
-./client -port 6666
+./node -port 6666

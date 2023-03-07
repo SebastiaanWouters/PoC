@@ -121,7 +121,7 @@ func getLatestBlock() Block {
 }
 
 func main() {
-	evalFile("/interpretto/script.vg")
+	evalFile("/worker/script.vg")
 }
 
 func evalFile(path string) {
@@ -218,7 +218,7 @@ func generateBlock(attestation []byte) Block {
 }
 
 func parseTokens() []string {
-	readFile, err := os.Open("/interpretto/script.js")
+	readFile, err := os.Open("/worker/script.js")
 	check(err)
 
 	var tokens []string
@@ -244,7 +244,7 @@ func saveResults(results *object.ResultMap) {
 	attestation := generateAttestationWithHash([]byte(hash))
 	r := Results{ResultMap: results.GetAll(), Proof: attestation}
 	file, _ := json.MarshalIndent(r, "", " ")
-	_ = ioutil.WriteFile("/interpretto/result.json", file, 0644)
+	_ = ioutil.WriteFile("/worker/result.json", file, 0644)
 }
 
 func broadcast(block Block) {

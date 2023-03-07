@@ -1,5 +1,5 @@
 {
- "exe": "main",
+ "exe": "worker",
  "key": "private.pem",
  "debug": true,
  "heapSize": 512,
@@ -9,7 +9,7 @@
  "mounts": [
   {
       "source": "./",
-      "target": "/interpretto",
+      "target": "/worker",
       "type": "hostfs",
       "readOnly": false
   },
