@@ -61,7 +61,7 @@ var newBlock Block
 
 var mutex = &sync.Mutex{}
 
-var uniqueID string = "d9d4cca4aa671cf675f11d1ab29f5ba035b27d8570443f5556455f9e5f13356e"
+var uniqueID string = "8a529934ab1359c62f551de5ff70d61229e1492a33a1e699a3de1bd1c1280e03"
 var difficulty int = 1
 
 func readBlockchain() Blockchain {
