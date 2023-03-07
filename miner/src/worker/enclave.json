@@ -8,7 +8,7 @@
  "securityVersion": 1,
  "mounts": [
   {
-      "source": "/scripts/",
+      "source": "./",
       "target": "/worker",
       "type": "hostfs",
       "readOnly": false
