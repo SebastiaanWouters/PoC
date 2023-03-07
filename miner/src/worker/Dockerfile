@@ -26,10 +26,10 @@ RUN wget https://github.com/edgelesssys/ego/releases/download/v${egover}/ego_${e
   && dpkg -i --force-depends ego_${egover}_amd64.deb
 
 # Build your app
-RUN git clone --depth=1 https://github.com/SebastiaanWouters/PoC \
-  && cd PoC/miner/src/worker \
-  && ego-go build -trimpath
-RUN --mount=type=secret,id=signingkey,dst=/PoC/miner/src/worker/private.pem,required=true ego sign PoC/miner/src/worker/worker
+RUN git clone --depth=1 https://github.com/SebastiaanWouters/PoC
+WORKDIR "/PoC/miner/src/worker"
+RUN ego-go build -trimpath
+RUN --mount=type=secret,id=signingkey,dst=/PoC/miner/src/worker/private.pem,required=true ego sign worker
 
 # Use the deploy target if you want to deploy your app as a Docker image
 FROM ghcr.io/edgelesssys/ego-deploy:v${egover} AS deploy
