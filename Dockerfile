@@ -1,4 +1,4 @@
-ARG egover=1.0.0
+ARG egover=1.1.0
 FROM ghcr.io/edgelesssys/ego/build-base:v${egover} AS build
 ARG egover
 
