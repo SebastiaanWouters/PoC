@@ -8,7 +8,7 @@
  "securityVersion": 1,
  "mounts": [
   {
-      "source": "./",
+      "source": "/home/sebasWouters/PoC/miner/src/worker",
       "target": "/worker",
       "type": "hostfs",
       "readOnly": false
