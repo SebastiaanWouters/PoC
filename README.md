@@ -7,8 +7,12 @@ with a blockchain and local P2P communication. Code is written in Go, compiled w
 
 # Create A Reproducible Build
 
-openssl genrsa -out private.pem -3 3072
+Execute the listed commands to create an executable and verify the source code,
+the output of uniqueid should be: 71ae46f315cdfb4bc6d3f45919d7a72f2d09c23d37d42d8e7f3a835f587b8117
+Tested using Docker version 20.10.23, build 7155243
 
-DOCKER_BUILDKIT=1 docker build --secret id=signingkey,src=private.pem -o. .
+1. openssl genrsa -out private.pem -3 3072
 
-ego uniqueid worker
+2. sudo DOCKER_BUILDKIT=1 docker build --secret id=signingkey,src=private.pem -o. .
+
+3. ego uniqueid worker
