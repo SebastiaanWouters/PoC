@@ -33,6 +33,11 @@ type Block struct {
 	Proof    []byte
 }
 
+type Results struct {
+	ResultMap map[string]object.Object
+	Proof     []byte
+}
+
 type Tx struct {
 	From   string
 	To     string
@@ -55,15 +60,25 @@ func check(e error) {
 func monitorChan(c chan int) {
 	for {
 		<-c
-		operationCount++
+		operationCount += 1
+		if operationCount%100000 == 0 {
+			tryBlock()
+		}
 	}
 }
 
 // SHA256 hashing
-func calculateHash(block Block) string {
+func calculateBlockHash(block Block) string {
 	record := strconv.Itoa(block.Index) + block.PrevHash + strconv.Itoa(int(block.Nonce)) + string(block.Proof)
 	h := sha256.New()
 	h.Write([]byte(record))
+	hashed := h.Sum(nil)
+	return hex.EncodeToString(hashed)
+}
+
+func calculateStringHash(s string) string {
+	h := sha256.New()
+	h.Write([]byte(s))
 	hashed := h.Sum(nil)
 	return hex.EncodeToString(hashed)
 }
@@ -106,19 +121,7 @@ func getLatestBlock() Block {
 }
 
 func main() {
-	evalFile("/interpretto/script.vc")
-
-	tokens := parseTokens()
-
-	start := time.Now()
-
-	for _, token := range tokens {
-		interpret(token)
-	}
-
-	elapsed := time.Since(start)
-	fmt.Printf("Elapsed time: %v\n", elapsed)
-
+	evalFile("/interpretto/script.vg")
 }
 
 func evalFile(path string) {
@@ -130,11 +133,13 @@ func evalFile(path string) {
 		log.Fatalln("Reading File Failed")
 	}
 	input := string(dat)
+
 	repl.Eval(input, rMap, c)
+
 	fmt.Println("operations executed: ", operationCount)
-	for name, value := range rMap.GetAll() {
-		fmt.Println("Saved", name, "with value", value.Inspect())
-	}
+
+	saveResults(rMap)
+
 }
 
 func interpret(token string) {
@@ -190,11 +195,10 @@ func generateAttestation() []byte {
 
 }
 
-func generateAttestationWithHash(prevHash []byte) []byte {
-	report, err := enclave.GetRemoteReport(prevHash)
+func generateAttestationWithHash(hash []byte) []byte {
+	report, err := enclave.GetRemoteReport(hash)
 	check(err)
 	return report
-
 }
 
 func generateBlock(attestation []byte) Block {
@@ -209,7 +213,7 @@ func generateBlock(attestation []byte) Block {
 		Index:    prevIndex + 1,
 		Proof:    attestation,
 	}
-	block.Hash = calculateHash(block)
+	block.Hash = calculateBlockHash(block)
 	return block
 }
 
@@ -227,6 +231,20 @@ func parseTokens() []string {
 	}
 	readFile.Close()
 	return tokens
+}
+
+func saveResults(results *object.ResultMap) {
+	s := ""
+	for key, value := range results.GetAll() {
+		s += key
+		s += value.Inspect()
+	}
+	hash := calculateStringHash(s)
+	fmt.Println(hash)
+	attestation := generateAttestationWithHash([]byte(hash))
+	r := Results{ResultMap: results.GetAll(), Proof: attestation}
+	file, _ := json.MarshalIndent(r, "", " ")
+	_ = ioutil.WriteFile("/interpretto/result.json", file, 0644)
 }
 
 func broadcast(block Block) {
