@@ -5,6 +5,9 @@
 !Dockerfile
 # Unignore all dirs
 !*/
+
+data
 **/private.pem
 **/public.pem
 **/result.json
+**/blockchain.json

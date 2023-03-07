@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -45,6 +44,15 @@ type Tx struct {
 	Sig    string
 }
 
+var genesisBlock = Block{
+	Index:    0,
+	Txs:      "",
+	Hash:     "0000000000000000000000000000000000000000",
+	Nonce:    21,
+	PrevHash: "",
+	Proof:    []byte(""),
+}
+
 var operations uint32 = 0
 var results []int
 var blockchain Blockchain
@@ -61,7 +69,7 @@ func monitorChan(c chan int) {
 	for {
 		<-c
 		operationCount += 1
-		if operationCount%100000 == 0 {
+		if operationCount%10000000 == 0 {
 			tryBlock()
 		}
 	}
@@ -104,8 +112,20 @@ func validateHash(hash string) bool {
 func getLatestBlock() Block {
 	content, err := ioutil.ReadFile("/data/blockchain.json")
 	if err != nil {
-		log.Fatal("Error when opening file: ", err)
+		path := "/data"
+		err := os.MkdirAll(path, os.ModePerm)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		blockchain = append(blockchain, genesisBlock)
+		bytes, err := json.MarshalIndent(blockchain, "", "  ")
+		if err != nil {
+			log.Fatalln("Failed to initialize blockchain", err)
+		}
+		ioutil.WriteFile("/data/blockchain.json", bytes, 0644)
+		log.Println("Initialized blockchain with genesis block")
 	}
+	content, err = ioutil.ReadFile("/data/blockchain.json")
 
 	// Now let's unmarshall the data into `payload`
 	var payload Blockchain
@@ -136,7 +156,7 @@ func evalFile(path string) {
 
 	repl.Eval(input, rMap, c)
 
-	fmt.Println("operations executed: ", operationCount)
+	log.Println("Operations executed: ", operationCount)
 
 	saveResults(rMap)
 
@@ -176,10 +196,10 @@ func tryBlock() {
 	attestation := generateAttestationWithHash(hash)
 	block := generateBlock(attestation)
 
-	fmt.Println("Found block with hash: ", block.Hash)
+	log.Println("Found a block with hash: ", block.Hash)
 
 	if validateHash(block.Hash) {
-		fmt.Println("Valid Block Found")
+		log.Println("Block satisfies the dificulty requirement, broadcasting to the network...")
 		broadcast(block)
 	}
 }
@@ -188,7 +208,7 @@ func generateAttestation() []byte {
 	buf := make([]byte, 10)
 	binary.LittleEndian.PutUint32(buf, operations)
 	byteArray := []byte{buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[8], buf[9]}
-	fmt.Println("Operations: ", operations)
+	log.Println("Operations: ", operations)
 	report, err := enclave.GetRemoteReport(byteArray)
 	check(err)
 	return report
@@ -240,7 +260,6 @@ func saveResults(results *object.ResultMap) {
 		s += value.Inspect()
 	}
 	hash := calculateStringHash(s)
-	fmt.Println(hash)
 	attestation := generateAttestationWithHash([]byte(hash))
 	r := Results{ResultMap: results.GetAll(), Proof: attestation}
 	file, _ := json.MarshalIndent(r, "", " ")

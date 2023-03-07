@@ -4,19 +4,19 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
-	"flag"
-	"fmt"
-	"os"
-	"strconv"
 	"crypto/sha256"
-	"sync"
 	"encoding/hex"
 	"encoding/json"
-	"time"
+	"flag"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"io/ioutil"
-	
+	"os"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -25,28 +25,35 @@ import (
 	"github.com/multiformats/go-multiaddr"
 
 	"github.com/edgelesssys/ego/eclient"
-
 )
 
 // Blockchain is a series of validated Blocks
 
-
 type Blockchain []Block
 
 type Block struct {
-	Index     int
-	Txs       string
-	Hash      string
-	Nonce 		uint32
-	PrevHash  string
-	Proof []byte
+	Index    int
+	Txs      string
+	Hash     string
+	Nonce    uint32
+	PrevHash string
+	Proof    []byte
 }
 
 type Tx struct {
-	From string
-	To string
+	From   string
+	To     string
 	Amount int
-	Sig string
+	Sig    string
+}
+
+var genesisBlock = Block{
+	Index:    0,
+	Txs:      "",
+	Hash:     "0000000000000000000000000000000000000000",
+	Nonce:    21,
+	PrevHash: "",
+	Proof:    []byte(""),
 }
 
 var blockchain Blockchain
@@ -54,20 +61,32 @@ var newBlock Block
 
 var mutex = &sync.Mutex{}
 
-var uniqueID string = "1cbb59aaed914ff617d043d4dbd0c78d5da9e47b8bed96faa14624e2087b6416"
+var uniqueID string = "d9d4cca4aa671cf675f11d1ab29f5ba035b27d8570443f5556455f9e5f13356e"
 var difficulty int = 1
 
 func readBlockchain() Blockchain {
 	content, err := ioutil.ReadFile("./../../data/blockchain.json")
 	if err != nil {
-			log.Fatal("Error when opening file: ", err)
-	}
+		path := "./../../data"
+		err := os.MkdirAll(path, os.ModePerm)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		blockchain = append(blockchain, genesisBlock)
+		bytes, err := json.MarshalIndent(blockchain, "", "  ")
+		if err != nil {
+			log.Fatalln("Failed to initialize blockchain", err)
+		}
 
+		ioutil.WriteFile("./../../data/blockchain.json", bytes, 0644)
+		log.Println("Initialized blockchain with genesis block")
+	}
+	content, err = ioutil.ReadFile("./../../data/blockchain.json")
 	// Now let's unmarshall the data into `payload`
 	var payload Blockchain
 	err = json.Unmarshal(content, &payload)
 	if err != nil {
-			log.Fatal("Error during Unmarshal(): ", err)
+		log.Fatal("Error during Unmarshal(): ", err)
 	}
 
 	// Let's print the unmarshalled data!
@@ -78,10 +97,10 @@ func readBlockchain() Blockchain {
 
 func writeBlock(newBlock Block) {
 	blockchain = append(blockchain, newBlock)
-	
+
 	bytes, err := json.MarshalIndent(blockchain, "", "  ")
 	if err != nil {
-		fmt.Println("Error marshalling blockchain")
+		log.Println("Error marshalling blockchain")
 		return
 	}
 	_ = ioutil.WriteFile("./../../data/blockchain.json", bytes, 0644)
@@ -90,10 +109,10 @@ func writeBlock(newBlock Block) {
 
 func writeBlockchain(chain Blockchain) {
 	blockchain = chain
-	
+
 	bytes, err := json.MarshalIndent(blockchain, "", "  ")
 	if err != nil {
-		fmt.Println("Error marshalling blockchain")
+		log.Println("Error marshalling blockchain")
 		return
 	}
 	_ = ioutil.WriteFile("./../../data/blockchain.json", bytes, 0644)
@@ -104,7 +123,7 @@ func calculateWork(chain Blockchain) int {
 	totalZeros := 0
 
 	for _, block := range chain {
-	
+
 		hashString := block.Hash
 		zeros := countLeadingZeros(hashString)
 
@@ -116,18 +135,12 @@ func calculateWork(chain Blockchain) int {
 func countLeadingZeros(hash string) int {
 	var leadingZeros int
 	for _, c := range hash {
-			if c != '0' {
-					break
-			}
-			leadingZeros++
+		if c != '0' {
+			break
+		}
+		leadingZeros++
 	}
 	return leadingZeros
-}
-
-func check(e error) {
-	if e != nil {
-			fmt.Println(e)
-	}
 }
 
 // SHA256 hashing
@@ -145,21 +158,21 @@ func validateHash(hash string) bool {
 
 	// Check against threshold
 	if leadingZeros >= difficulty {
-			return true
+		return true
 	} else {
-			return false
+		return false
 	}
 }
 
 func handleStream(stream network.Stream) {
 
-		// Create a buffer stream for non blocking read and write.
-		rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
+	// Create a buffer stream for non blocking read and write.
+	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
 
-		go readData(rw)
-		//go writeData(rw)
+	go readData(rw)
+	//go writeData(rw)
 
-		// 'stream' will stay open until you close it (or the other side closes it).
+	// 'stream' will stay open until you close it (or the other side closes it).
 }
 
 func readData(rw *bufio.ReadWriter) {
@@ -183,7 +196,7 @@ func readData(rw *bufio.ReadWriter) {
 
 			mutex.Lock()
 			if calculateWork(chain) > calculateWork(blockchain) {
-				fmt.Println("Heavier chain received")
+				log.Println("Heavier chain received")
 				writeBlockchain(chain)
 			}
 			mutex.Unlock()
@@ -228,60 +241,58 @@ func isBlockValid(newBlock, oldBlock Block) bool {
 	if verifyAttestation(newBlock.Proof, oldBlock.Hash) != true {
 		return false
 	}
-	
+
 	return true
 }
 
-
 func verifyAttestation(attestation []byte, oldHash string) bool {
 	report, err := eclient.VerifyRemoteReport(attestation)
-	if (err != nil) {
-		check(err)
+	if err != nil {
+		log.Println(err)
 		return false
 	} else {
-		if (hex.EncodeToString(report.UniqueID) == uniqueID) {
+		if hex.EncodeToString(report.UniqueID) == uniqueID {
 			data := report.Data
-			if (validateHash(string(data[:32]))) {
-				if (string(data[:32]) == oldHash[:32]) {
+			if validateHash(string(data[:32])) {
+				if string(data[:32]) == oldHash[:32] {
 					return true
 				} else {
 					return false
 				}
-				
+
 			} else {
 				return false
 			}
-			
+
 		} else {
-			fmt.Println("invalid enclave")
+			log.Println("invalid enclave")
 			return false
 		}
-		
+
 	}
 }
 
 func processBlock(w http.ResponseWriter, req *http.Request) {
-			var b Block
-			// Try to decode the request body into the struct. If there is an error,
-			// respond to the client with the error message and a 400 status code.
-			err := json.NewDecoder(req.Body).Decode(&b)
-			if err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-			} else {
-				if (isBlockValid(b, blockchain[len(blockchain) - 1])) {
-					writeBlock(b)
-					fmt.Println("Blockchain updated with valid new block!")
-				}
-			}
+	var b Block
+	// Try to decode the request body into the struct. If there is an error,
+	// respond to the client with the error message and a 400 status code.
+	err := json.NewDecoder(req.Body).Decode(&b)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	} else {
+		if isBlockValid(b, blockchain[len(blockchain)-1]) {
+			writeBlock(b)
+			log.Println("Blockchain updated with valid new block!")
+		}
+	}
 }
 
 func spinUpServer() {
 	http.HandleFunc("/newblock", processBlock)
-	fmt.Println("Listening on port 4001")
+	log.Println("Listening on port 4001")
 	http.ListenAndServe(":4001", nil)
 }
-	
 
 func main() {
 	blockchain = readBlockchain()
@@ -292,13 +303,13 @@ func main() {
 	cfg := parseFlags()
 
 	if *help {
-		fmt.Printf("Simple example for peer discovery using mDNS. mDNS is great when you have multiple peers in local LAN.")
-		fmt.Printf("Usage: \n   Run './chat-with-mdns'\nor Run './chat-with-mdns -host [host] -port [port] -rendezvous [string] -pid [proto ID]'\n")
+		log.Printf("Simple example for peer discovery using mDNS. mDNS is great when you have multiple peers in local LAN.")
+		log.Printf("Usage: \n   Run './chat-with-mdns'\nor Run './chat-with-mdns -host [host] -port [port] -rendezvous [string] -pid [proto ID]'\n")
 
 		os.Exit(0)
 	}
 
-	fmt.Printf("[*] Listening on: %s with port: %d\n", cfg.listenHost, cfg.listenPort)
+	log.Printf("[*] Listening on: %s with port: %d\n", cfg.listenHost, cfg.listenPort)
 
 	ctx := context.Background()
 	r := rand.Reader
@@ -325,30 +336,30 @@ func main() {
 	// This function is called when a peer initiates a connection and starts a stream with this peer.
 	host.SetStreamHandler(protocol.ID(cfg.ProtocolID), handleStream)
 
-	fmt.Printf("\n[*] Your Multiaddress Is: /ip4/%s/tcp/%v/p2p/%s\n", cfg.listenHost, cfg.listenPort, host.ID().Pretty())
+	log.Printf("\n[*] Your Multiaddress Is: /ip4/%s/tcp/%v/p2p/%s\n", cfg.listenHost, cfg.listenPort, host.ID().Pretty())
 
 	peerChan := initMDNS(host, cfg.RendezvousString)
 	for { // allows multiple peers to join
-			peer := <-peerChan // will block untill we discover a peer
-			fmt.Println("Found peer:", peer, ", connecting")
+		peer := <-peerChan // will block untill we discover a peer
+		log.Println("Found peer:", peer, ", connecting")
 
-			if err := host.Connect(ctx, peer); err != nil {
-				fmt.Println("Connection failed:", err)
-				continue
-			}
+		if err := host.Connect(ctx, peer); err != nil {
+			log.Println("Connection failed:", err)
+			continue
+		}
 
-			// open a stream, this stream will be handled by handleStream other end
-			stream, err := host.NewStream(ctx, peer.ID, protocol.ID(cfg.ProtocolID))
+		// open a stream, this stream will be handled by handleStream other end
+		stream, err := host.NewStream(ctx, peer.ID, protocol.ID(cfg.ProtocolID))
 
-			if err != nil {
-				fmt.Println("Stream open failed", err)
-			} else {
-				rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
+		if err != nil {
+			log.Println("Stream open failed", err)
+		} else {
+			rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
 
-				go writeData(rw)
-				//go readData(rw)
-				fmt.Println("Connected to:", peer)
-			}
+			go writeData(rw)
+			//go readData(rw)
+			log.Println("Connected to:", peer)
+		}
 	}
 
 }
