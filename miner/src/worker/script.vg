@@ -1,1 +1,1 @@
-for (let a = 0; a < 10000000000000000; let a = a + 1) { isPrime(a) }
+for (let a = 0; a < 100000000000000000; let a = a + 1) { isPrime(a) }

@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -59,19 +57,29 @@ var blockchain Blockchain
 var difficulty int = 1
 var operationCount int = 0
 
+const (
+	OPS_PER_BLOCK = 10000000
+)
+
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
 
-func monitorChan(c chan int) {
+func opChanMonitor(c chan int) {
 	for {
 		<-c
 		operationCount += 1
-		if operationCount%10000000 == 0 {
+		if operationCount%OPS_PER_BLOCK == 0 {
 			tryBlock()
 		}
+	}
+}
+
+func rChanMonitor(c chan object.Result) {
+	for {
+		writeToDisk(<-c)
 	}
 }
 
@@ -145,49 +153,19 @@ func main() {
 }
 
 func evalFile(path string) {
-	c := make(chan int)
-	go monitorChan(c)
-	rMap := object.NewResultMap()
+	opChan := make(chan int)
+	go opChanMonitor(opChan)
+	rChan := make(chan object.Result)
+	go rChanMonitor(rChan)
 	dat, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalln("Reading File Failed")
 	}
 	input := string(dat)
 
-	repl.Eval(input, rMap, c)
+	repl.Eval(input, rChan, opChan)
 
 	log.Println("Operations executed: ", operationCount)
-
-	saveResults(rMap)
-
-}
-
-func interpret(token string) {
-	time.Sleep(200 * time.Millisecond)
-	var1, err := strconv.Atoi(string(token[0]))
-	check(err)
-	var2, err := strconv.Atoi(string(token[2]))
-	check(err)
-	operator := string(token[1])
-	var result int
-	switch operator {
-	case "+":
-		result = var1 + var2
-		operations += 1
-	case "*":
-		result = var1 * var2
-		operations += 1
-	case "/":
-		result = var1 / var2
-		operations += 1
-	case "-":
-		result = var1 - var2
-		operations += 1
-	}
-	if operations%1 == 0 {
-		tryBlock()
-	}
-	results = append(results, result)
 }
 
 func tryBlock() {
@@ -237,33 +215,47 @@ func generateBlock(attestation []byte) Block {
 	return block
 }
 
-func parseTokens() []string {
-	readFile, err := os.Open("/worker/script.js")
-	check(err)
+func writeToDisk(res object.Result) {
+	filename := "/worker/results.json"
 
-	var tokens []string
-	fileScanner := bufio.NewScanner(readFile)
-
-	fileScanner.Split(bufio.ScanLines)
-
-	for fileScanner.Scan() {
-		tokens = append(tokens, fileScanner.Text())
+	err := checkFile(filename)
+	if err != nil {
+		log.Println(err)
 	}
-	readFile.Close()
-	return tokens
+
+	file, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Println(err)
+	}
+
+	data := []object.Result{}
+
+	json.Unmarshal(file, &data)
+
+	data = append(data, res)
+
+	// Preparing the data to be marshalled and written.
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = ioutil.WriteFile(filename, dataBytes, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+
 }
 
-func saveResults(results *object.ResultMap) {
-	s := ""
-	for key, value := range results.GetAll() {
-		s += key
-		s += value.Inspect()
+func checkFile(filename string) error {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		_, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
 	}
-	hash := calculateStringHash(s)
-	attestation := generateAttestationWithHash([]byte(hash))
-	r := Results{ResultMap: results.GetAll(), Proof: attestation}
-	file, _ := json.MarshalIndent(r, "", " ")
-	_ = ioutil.WriteFile("/worker/result.json", file, 0644)
+	return nil
 }
 
 func broadcast(block Block) {
@@ -289,10 +281,4 @@ func broadcast(block Block) {
 	log.Printf("status Code: %d", res.StatusCode)
 
 	defer res.Body.Close()
-	// read body
-	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		log.Fatalf("impossible to read all body of response: %s", err)
-	}
-	log.Printf("res body: %s", string(resBody))
 }

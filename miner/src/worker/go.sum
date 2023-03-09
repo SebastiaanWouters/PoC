@@ -1,5 +1,7 @@
 github.com/SebastiaanWouters/verigo v0.1.6 h1:KQ1qbzzGngayrlTMgGqO32HAD2Lhcjnei9ttaOMf/Ik=
 github.com/SebastiaanWouters/verigo v0.1.6/go.mod h1:LwwpF3GmCdxn65n6HbW7PuaDSCIfl9WrgVYdCkgDWBU=
+github.com/SebastiaanWouters/verigo v0.1.8 h1:U/2gu668enxGc7Vf7d77i0wGGqAi42ckIODdw1bpeLM=
+github.com/SebastiaanWouters/verigo v0.1.8/go.mod h1:LwwpF3GmCdxn65n6HbW7PuaDSCIfl9WrgVYdCkgDWBU=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/edgelesssys/ego v1.1.0 h1:UcDiGGJ8PF8YStlticxi2hMgPqRTtP42FzaGaAxm9Ys=
 github.com/edgelesssys/ego v1.1.0/go.mod h1:ex4cDvgi0l6wxDm5xBaQzJqi547FMPDsxv+3ERLJfLI=
