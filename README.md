@@ -8,7 +8,7 @@ with a blockchain and local P2P communication. Code is written in Go, compiled w
 # Create A Reproducible Build
 
 Execute the listed commands in the worker directory to create an executable in a docker container and verify the source code,
-the output of uniqueid should be: 71ae46f315cdfb4bc6d3f45919d7a72f2d09c23d37d42d8e7f3a835f587b8117
+the output of uniqueid should be: 3361447737af78e8f8ff9944a883dc9bef7b6f801c55c031bccfdc3ff82f9c89
 
 Tested using Docker version 20.10.23, build 7155243
 
