@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/edgelesssys/ego v1.1.0
+	github.com/joho/godotenv v1.5.1
 	github.com/libp2p/go-libp2p v0.26.2
 	github.com/multiformats/go-multiaddr v0.8.0
 )

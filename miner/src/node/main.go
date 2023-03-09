@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -295,6 +297,9 @@ func spinUpServer() {
 }
 
 func main() {
+	godotenv.Load("../../../.env")
+	uniqueID = os.Getenv("UNIQUE_ID")
+	log.Println(uniqueID)
 	blockchain = readBlockchain()
 
 	go spinUpServer()

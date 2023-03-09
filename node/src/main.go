@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -60,7 +62,7 @@ var newBlock Block
 
 var mutex = &sync.Mutex{}
 
-var uniqueID string = "8a529934ab1359c62f551de5ff70d61229e1492a33a1e699a3de1bd1c1280e03"
+var uniqueID string = ""
 var difficulty int = 1
 
 func readBlockchain() Blockchain {
@@ -267,6 +269,8 @@ func verifyAttestation(attestation []byte, oldHash string) bool {
 }
 
 func main() {
+	godotenv.Load("../../.env")
+	uniqueID = os.Getenv("UNIQUE_ID")
 	blockchain = readBlockchain()
 
 	help := flag.Bool("help", false, "Display Help")
